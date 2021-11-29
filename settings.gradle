@@ -8,7 +8,7 @@ dependencyResolutionManagement {
     }
     versionCatalogs {
         deps {
-//            from(files("${rootDir}/versions.toml"))
+//            from(files("${rootDir}/catalog/versions.toml"))
             from("com.1step2hell:catalog:1.0.0-SNAPSHOT")
             // 还可以在这里重写覆盖catalog中的版本（这里以groovy为例）
             version("groovy", "3.0.6")
