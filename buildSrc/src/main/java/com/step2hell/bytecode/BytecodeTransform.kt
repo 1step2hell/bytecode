@@ -2,12 +2,9 @@ package com.step2hell.bytecode
 
 import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassWriter;
 import java.io.IOException
 
-class BytecodeTransform : Transform() {
+class BytecodeTransform constructor(private val extension: BytecodeExtension) : Transform() {
     override fun getName() = "BytecodeTransform"
 
     override fun getInputTypes(): MutableSet<QualifiedContent.ContentType> =
@@ -32,6 +29,8 @@ class BytecodeTransform : Transform() {
 
     @Throws(TransformException::class, InterruptedException::class, IOException::class)
     override fun transform(transformInvocation: TransformInvocation?) {
-        super.transform(transformInvocation) // todo
+        println("\n====> transform: extension=$extension")
+        // todo
+        super.transform(transformInvocation)
     }
 }
