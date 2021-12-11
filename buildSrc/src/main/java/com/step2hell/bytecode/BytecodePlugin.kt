@@ -3,6 +3,7 @@ package com.step2hell.bytecode
 import Dependencies
 import Versions
 import com.android.build.gradle.AppExtension
+import com.android.build.gradle.AppPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import kotlin.reflect.full.memberProperties
@@ -26,6 +27,7 @@ class BytecodePlugin : Plugin<Project> {
     }
 
     private fun registerTransform(project: Project) {
+        if (!project.plugins.hasPlugin(AppPlugin::class.java)) return
         project.extensions.getByType(AppExtension::class.java)
             .registerTransform(BytecodeTransform())
     }

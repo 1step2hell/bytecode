@@ -7,3 +7,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "bytecode"
 include ':app'
+include ':lib'
