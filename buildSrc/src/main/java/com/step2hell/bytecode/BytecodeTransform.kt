@@ -6,6 +6,9 @@ import com.android.utils.FileUtils
 import java.io.File
 import java.io.IOException
 
+/**
+ * todo: 自己重写 FileUtils，移除 gradle 脚本里的 com.android.tools:common 依赖，减小插件体积
+ */
 class BytecodeTransform constructor(private val extension: BytecodeExtension) : Transform() {
     override fun getName() = "BytecodeTransform"
 
