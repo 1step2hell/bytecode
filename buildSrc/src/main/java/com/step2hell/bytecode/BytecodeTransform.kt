@@ -2,6 +2,8 @@ package com.step2hell.bytecode
 
 import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
+import com.android.utils.FileUtils
+import java.io.File
 import java.io.IOException
 
 class BytecodeTransform constructor(private val extension: BytecodeExtension) : Transform() {
@@ -25,12 +27,113 @@ class BytecodeTransform constructor(private val extension: BytecodeExtension) : 
     override fun getScopes(): MutableSet<in QualifiedContent.Scope> =
         TransformManager.SCOPE_FULL_PROJECT
 
-    override fun isIncremental() = false
+    override fun isIncremental() = true
 
     @Throws(TransformException::class, InterruptedException::class, IOException::class)
-    override fun transform(transformInvocation: TransformInvocation?) {
-        println("\n====> transform: extension=$extension")
-        // todo
-        super.transform(transformInvocation)
+    override fun transform(invocation: TransformInvocation) {
+        super.transform(invocation)
+        println("====> transform: extension=$extension")
+        println("====> transform: isIncremental=$isIncremental invocation.isIncremental=${invocation.isIncremental}")
+        if (!invocation.isIncremental) invocation.outputProvider.deleteAll()
+        invocation.inputs.forEach { transformInput ->
+            transformInput.jarInputs.forEach { jarInput ->
+                onJarInput(jarInput, invocation.outputProvider, invocation.isIncremental)
+            }
+            transformInput.directoryInputs.forEach { dirInput ->
+                onDirInput(dirInput, invocation.outputProvider, invocation.isIncremental)
+            }
+        }
+    }
+
+    private fun onJarInput(
+        jarInput: JarInput,
+        outputProvider: TransformOutputProvider,
+        incremental: Boolean
+    ) {
+        val dst = outputProvider.getContentLocation(
+            jarInput.name,
+            jarInput.contentTypes,
+            jarInput.scopes,
+            Format.JAR
+        )
+        println("\n====> onJarInput src=${jarInput.file.absolutePath} dst=$dst incremental=$incremental status=${jarInput.status}")
+        if (incremental) {
+            when (jarInput.status) {
+                Status.NOTCHANGED -> {
+                }
+                Status.REMOVED -> if (dst.exists()) FileUtils.delete(dst)
+                Status.ADDED -> transformJarInput(jarInput, dst)
+                Status.CHANGED -> {
+                    if (dst.exists()) FileUtils.delete(dst)
+                    transformJarInput(jarInput, dst)
+                }
+            }
+        } else {
+            transformJarInput(jarInput, dst)
+        }
+    }
+
+    private fun transformJarInput(jarInput: JarInput, dst: File) {
+        FileUtils.copyFile(jarInput.file, dst)
+    }
+
+    private fun onDirInput(
+        dirInput: DirectoryInput,
+        outputProvider: TransformOutputProvider,
+        incremental: Boolean
+    ) {
+        val dst = outputProvider.getContentLocation(
+            dirInput.name,
+            dirInput.contentTypes,
+            dirInput.scopes,
+            Format.DIRECTORY
+        )
+        println("\n====> onDirInput dst=$dst incremental=$incremental")
+        if (incremental) {
+            FileUtils.mkdirs(dst)
+            val srcDirPath = dirInput.file.absolutePath
+            val dstDirPath = dst.absolutePath
+            dirInput.changedFiles.forEach { (srcFile, status) ->
+                val dstFile = File(srcFile.absolutePath.replace(srcDirPath, dstDirPath))
+                println("\n====> onDirInput status=$status srcDirPath=$srcDirPath dstDirPath=$dstDirPath dstFile=${dstFile.absolutePath}")
+                when (status) {
+                    Status.NOTCHANGED -> {
+                    }
+                    Status.REMOVED -> if (dstFile.exists()) FileUtils.delete(dstFile)
+                    Status.ADDED -> transformDirInput(dirInput, dst)
+                    Status.CHANGED -> {
+                        if (dst.exists()) FileUtils.delete(dst)
+                        transformDirInput(dirInput, dst)
+                    }
+                }
+            }
+        } else {
+            transformDirInput(dirInput, dst)
+        }
+    }
+
+    private fun transformDirInput(dirInput: DirectoryInput, dst: File) {
+        if (dirInput.file.isDirectory) {
+            dirInput.file.walk().forEach { file ->
+                val name = file.name
+                println("====> transformDirInput name=$name")
+//                if (name.endsWith(".class") && !name.startsWith("R\$")
+//                    && name != "R.class" && name != "BuildConfig.class"
+//                ) {
+//                    val classReader = ClassReader(file.readBytes())
+//                    val classWriter = ClassWriter(classReader, ClassWriter.COMPUTE_MAXS)
+//                    val className = name.split(".class")[0]
+//                    val classVisitor = TraceVisitor(className, classWriter)
+//                    classReader.accept(classVisitor, ClassReader.EXPAND_FRAMES)
+//                    val code = classWriter.toByteArray()
+//                    val fos =
+//                        FileOutputStream(file.parentFile.absoluteFile.toString() + File.separator + name)
+//                    fos.write(code)
+//                    fos.flush()
+//                    fos.close()
+//                }
+            }
+        }
+        FileUtils.copyDirectory(dirInput.file, dst)
     }
 }
