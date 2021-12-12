@@ -62,19 +62,15 @@ class BytecodeTransform constructor(private val extension: BytecodeExtension) : 
                 Status.NOTCHANGED -> {
                 }
                 Status.REMOVED -> if (dst.exists()) FileUtils.delete(dst)
-                Status.ADDED -> transformJarInput(jarInput, dst)
+                Status.ADDED -> doTransform(jarInput.file, dst)
                 Status.CHANGED -> {
                     if (dst.exists()) FileUtils.delete(dst)
-                    transformJarInput(jarInput, dst)
+                    doTransform(jarInput.file, dst)
                 }
             }
         } else {
-            transformJarInput(jarInput, dst)
+            doTransform(jarInput.file, dst)
         }
-    }
-
-    private fun transformJarInput(jarInput: JarInput, dst: File) {
-        FileUtils.copyFile(jarInput.file, dst)
     }
 
     private fun onDirInput(
@@ -90,7 +86,6 @@ class BytecodeTransform constructor(private val extension: BytecodeExtension) : 
         )
         println("\n====> onDirInput dst=$dst incremental=$incremental")
         if (incremental) {
-            FileUtils.mkdirs(dst)
             val srcDirPath = dirInput.file.absolutePath
             val dstDirPath = dst.absolutePath
             dirInput.changedFiles.forEach { (srcFile, status) ->
@@ -100,23 +95,23 @@ class BytecodeTransform constructor(private val extension: BytecodeExtension) : 
                     Status.NOTCHANGED -> {
                     }
                     Status.REMOVED -> if (dstFile.exists()) FileUtils.delete(dstFile)
-                    Status.ADDED -> transformDirInput(dirInput, dst)
+                    Status.ADDED -> doTransform(srcFile, dstFile)
                     Status.CHANGED -> {
-                        if (dst.exists()) FileUtils.delete(dst)
-                        transformDirInput(dirInput, dst)
+                        if (dstFile.exists()) FileUtils.delete(dstFile)
+                        doTransform(srcFile, dstFile)
                     }
                 }
             }
         } else {
-            transformDirInput(dirInput, dst)
+            doTransform(dirInput.file, dst)
         }
     }
 
-    private fun transformDirInput(dirInput: DirectoryInput, dst: File) {
-        if (dirInput.file.isDirectory) {
-            dirInput.file.walk().forEach { file ->
+    private fun doTransform(src: File, dst: File) {
+        if (src.isDirectory) {
+            src.walk().forEach { file ->
                 val name = file.name
-                println("====> transformDirInput name=$name")
+                println("====> transformFile name=$name")
 //                if (name.endsWith(".class") && !name.startsWith("R\$")
 //                    && name != "R.class" && name != "BuildConfig.class"
 //                ) {
@@ -133,7 +128,9 @@ class BytecodeTransform constructor(private val extension: BytecodeExtension) : 
 //                    fos.close()
 //                }
             }
+            FileUtils.copyDirectory(src, dst)
+        } else {
+            FileUtils.copyFile(src, dst)
         }
-        FileUtils.copyDirectory(dirInput.file, dst)
     }
 }
